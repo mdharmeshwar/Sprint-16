@@ -1,0 +1,3 @@
+﻿export const analyticsService = {
+  buildSummary: () => ({ total: 0, completed: 0, pending: 0 }),
+};
