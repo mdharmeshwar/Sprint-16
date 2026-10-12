@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: taskmatrix-api
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix server && npm --prefix server run build
+    startCommand: npm --prefix server run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: CLIENT_URL
+        value: https://taskmatrix-web.onrender.com
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+staticSites:
+  - name: taskmatrix-web
+    buildCommand: npm install --prefix client/src && npm --prefix client/src run build
+    staticPublishPath: client/src/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://taskmatrix-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
