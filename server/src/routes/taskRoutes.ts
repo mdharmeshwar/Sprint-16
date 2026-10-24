@@ -1,11 +1,12 @@
 ﻿import { Router } from 'express';
 import { createTask, getTasks, getTaskById, updateTask, deleteTask } from '../controllers/taskController.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { validateTaskPayload } from '../middleware/validateMiddleware.js';
+import { validateRequest } from '../middleware/validateMiddleware.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
 
-router.route('/').get(protect, getTasks).post(protect, validateTaskPayload, createTask);
-router.route('/:id').get(protect, getTaskById).put(protect, validateTaskPayload, updateTask).delete(protect, deleteTask);
+router.route('/').get(asyncHandler(protect), asyncHandler(getTasks)).post(asyncHandler(protect), validateRequest('task'), asyncHandler(createTask));
+router.route('/:id').get(asyncHandler(protect), asyncHandler(getTaskById)).put(asyncHandler(protect), validateRequest('taskUpdate'), asyncHandler(updateTask)).delete(asyncHandler(protect), asyncHandler(deleteTask));
 
 export default router;

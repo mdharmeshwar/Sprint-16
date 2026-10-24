@@ -432,6 +432,19 @@ html[data-theme='light'] .textarea {
   font-size: 0.92rem;
 }
 
+.ai-suggestion {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.ai-suggestion p {
+  margin: 0;
+}
+
 .tm-app-shell {
   position: relative;
   min-height: 100vh;
@@ -1288,7 +1301,7 @@ html[data-theme='light'] .kanban-card {
   }
 }
 
-/* TASK MATRIX // NEXUS — dimensional command surface */
+/* TASK MATRIX // NEXUS ï¿½ dimensional command surface */
 :root {
   --bg: #080b12;
   --bg-elev: #0d1220;

@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import Task from '../models/Task.js';
 import { getMemoryTaskById, getMemoryTasksByAuthor, makeId, memoryTasks, useMemoryStore } from '../utils/memoryStore.js';
 import { isValidObjectId } from '../utils/validation.js';
+import { buildErrorResponse } from '../utils/response.js';
 
 // The fallback in-memory store uses generated URL-safe IDs; Mongo-backed
 // records continue to require a valid ObjectId.
@@ -14,7 +15,7 @@ export const createTask = async (req: AuthenticatedRequest, res: Response) => {
   const { title, description, priority, status, dueDate } = req.body || {};
 
   if (!title || !description || !priority || !status) {
-    return res.status(400).json({ success: false, message: 'Title, description, priority, and status are required.' });
+    return res.status(400).json(buildErrorResponse('Title, description, priority, and status are required.', 'VALIDATION_ERROR'));
   }
 
   if (useMemoryStore()) {
@@ -59,17 +60,17 @@ export const getTaskById = async (req: AuthenticatedRequest, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   if (!isValidTaskId(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid task id.' });
+    return res.status(400).json(buildErrorResponse('Invalid task id.', 'INVALID_IDENTIFIER'));
   }
 
   if (useMemoryStore()) {
     const task = getMemoryTaskById(id);
     if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found.' });
+      return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
     }
 
     if (task.authorId !== req.user?._id) {
-      return res.status(403).json({ success: false, message: 'You are not authorized to view this task.' });
+      return res.status(403).json(buildErrorResponse('You are not authorized to view this task.', 'FORBIDDEN'));
     }
 
     return res.status(200).json({ success: true, data: task });
@@ -77,11 +78,11 @@ export const getTaskById = async (req: AuthenticatedRequest, res: Response) => {
 
   const task = await Task.findById(id);
   if (!task) {
-    return res.status(404).json({ success: false, message: 'Task not found.' });
+    return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
   }
 
   if (task.authorId.toString() !== req.user?._id) {
-    return res.status(403).json({ success: false, message: 'You are not authorized to view this task.' });
+    return res.status(403).json(buildErrorResponse('You are not authorized to view this task.', 'FORBIDDEN'));
   }
 
   return res.status(200).json({ success: true, data: task });
@@ -91,21 +92,17 @@ export const updateTask = async (req: AuthenticatedRequest, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   if (!isValidTaskId(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid task id.' });
+    return res.status(400).json(buildErrorResponse('Invalid task id.', 'INVALID_IDENTIFIER'));
   }
 
   if (useMemoryStore()) {
     const task = getMemoryTaskById(id);
     if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found.' });
+      return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
     }
 
     if (task.authorId !== req.user?._id) {
-      return res.status(403).json({ success: false, message: 'You are not authorized to update this task.' });
-    }
-
-    if (req.body.authorId && req.body.authorId !== req.user?._id) {
-      return res.status(403).json({ success: false, message: 'Ownership cannot be changed.' });
+      return res.status(403).json(buildErrorResponse('You are not authorized to update this task.', 'FORBIDDEN'));
     }
 
     const updatedTask = {
@@ -123,20 +120,16 @@ export const updateTask = async (req: AuthenticatedRequest, res: Response) => {
 
   const task = await Task.findById(id);
   if (!task) {
-    return res.status(404).json({ success: false, message: 'Task not found.' });
+    return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
   }
 
   if (task.authorId.toString() !== req.user?._id) {
-    return res.status(403).json({ success: false, message: 'You are not authorized to update this task.' });
-  }
-
-  if (req.body.authorId && req.body.authorId !== req.user?._id) {
-    return res.status(403).json({ success: false, message: 'Ownership cannot be changed.' });
+    return res.status(403).json(buildErrorResponse('You are not authorized to update this task.', 'FORBIDDEN'));
   }
 
   const updatedTask = await Task.findByIdAndUpdate(
     id,
-    { ...req.body, authorId: req.user?._id },
+    req.body,
     { new: true, runValidators: true }
   );
 
@@ -147,17 +140,17 @@ export const deleteTask = async (req: AuthenticatedRequest, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   if (!isValidTaskId(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid task id.' });
+    return res.status(400).json(buildErrorResponse('Invalid task id.', 'INVALID_IDENTIFIER'));
   }
 
   if (useMemoryStore()) {
     const task = getMemoryTaskById(id);
     if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found.' });
+      return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
     }
 
     if (task.authorId !== req.user?._id) {
-      return res.status(403).json({ success: false, message: 'You are not authorized to delete this task.' });
+      return res.status(403).json(buildErrorResponse('You are not authorized to delete this task.', 'FORBIDDEN'));
     }
 
     const index = memoryTasks.findIndex((entry) => entry._id === id);
@@ -168,11 +161,11 @@ export const deleteTask = async (req: AuthenticatedRequest, res: Response) => {
 
   const task = await Task.findById(id);
   if (!task) {
-    return res.status(404).json({ success: false, message: 'Task not found.' });
+    return res.status(404).json(buildErrorResponse('Task not found.', 'NOT_FOUND'));
   }
 
   if (task.authorId.toString() !== req.user?._id) {
-    return res.status(403).json({ success: false, message: 'You are not authorized to delete this task.' });
+    return res.status(403).json(buildErrorResponse('You are not authorized to delete this task.', 'FORBIDDEN'));
   }
 
   await task.deleteOne();

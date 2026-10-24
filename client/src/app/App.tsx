@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { api } from './services/api';
-import { createTask, deleteTask, getTasks, updateTask } from './services/taskService';
+import { createTask, deleteTask, getTasks, improveTaskDescription, updateTask } from './services/taskService';
 
 type Task = {
   _id?: string;
@@ -58,6 +58,8 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [taskForm, setTaskForm] = useState(emptyTask);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
@@ -226,6 +228,22 @@ const App = () => {
   const resetTaskForm = () => {
     setTaskForm(createEmptyTask());
     setEditingTaskId(null);
+    setAiSuggestion('');
+  };
+
+  const handleImproveDescription = async () => {
+    if (!token || aiLoading) return;
+    setAiLoading(true);
+    setError('');
+    setAiSuggestion('');
+    try {
+      const response = await improveTaskDescription(token, taskForm.description);
+      setAiSuggestion(response.data.suggestion);
+    } catch (err: any) {
+      setError(err.message || 'Could not improve the description.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleTaskSubmit = async (event: React.FormEvent) => {
@@ -652,8 +670,24 @@ const App = () => {
                 className="textarea"
                 placeholder="Description"
                 value={taskForm.description}
-                onChange={(e) => setTaskForm((current) => ({ ...current, description: e.target.value }))}
+                onChange={(e) => {
+                  setAiSuggestion('');
+                  setTaskForm((current) => ({ ...current, description: e.target.value }));
+                }}
               />
+              <button type="button" className="ghost-button" onClick={handleImproveDescription} disabled={aiLoading || !taskForm.description.trim()}>
+                {aiLoading ? 'Improving...' : 'Improve description'}
+              </button>
+              {aiSuggestion && (
+                <div className="ai-suggestion" role="status" aria-live="polite">
+                  <p>{aiSuggestion}</p>
+                  <button type="button" className="ghost-button" onClick={() => {
+                    setTaskForm((current) => ({ ...current, description: aiSuggestion }));
+                    setAiSuggestion('');
+                  }}>Use suggestion</button>
+                  <button type="button" className="ghost-button" onClick={() => setAiSuggestion('')}>Dismiss</button>
+                </div>
+              )}
 
               <div className="inline-grid">
                 <select

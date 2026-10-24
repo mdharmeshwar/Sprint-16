@@ -18,6 +18,16 @@ services:
         value: https://taskmatrix-web.onrender.com
       - key: STRIPE_SECRET_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: AI_RATE_LIMIT_MAX
+        value: 10
+      - key: LOGIN_RATE_LIMIT_MAX
+        value: 5
+      - key: TRUST_PROXY_HOPS
+        value: 1
 
 staticSites:
   - name: taskmatrix-web

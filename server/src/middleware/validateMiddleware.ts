@@ -1,28 +1,51 @@
 ﻿import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 
-export const validateTaskPayload = (req: Request, res: Response, next: NextFunction) => {
-  const { title, description, priority, status } = req.body || {};
-  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
-  const normalizedDescription = typeof description === 'string' ? description.trim() : '';
-  const normalizedPriority = typeof priority === 'string' ? priority.trim().toLowerCase() : '';
-  const normalizedStatus = typeof status === 'string' ? status.trim().toLowerCase() : '';
+const nonEmptyText = (max: number) => z.string().trim().min(1).max(max);
+const taskPayloadSchema = z.object({
+  title: nonEmptyText(160),
+  description: nonEmptyText(2000),
+  priority: z.string().trim().toLowerCase().pipe(z.enum(['low', 'medium', 'high', 'urgent'])),
+  status: z.string().trim().toLowerCase().pipe(z.enum(['todo', 'in-progress', 'done', 'blocked'])),
+  dueDate: z.union([z.string().datetime(), z.string().date()]).optional(),
+}).strict();
+const taskUpdateSchema = taskPayloadSchema.partial().refine((payload) => Object.keys(payload).length > 0, {
+  message: 'At least one editable task field is required.',
+});
 
-  if (!normalizedTitle || !normalizedDescription || !normalizedPriority || !normalizedStatus) {
-    return res.status(400).json({ success: false, message: 'Title, description, priority, and status are required.' });
+export const requestSchemas = {
+  task: taskPayloadSchema,
+  taskUpdate: taskUpdateSchema,
+  register: z.object({
+    name: nonEmptyText(100),
+    email: z.string().trim().email().max(254),
+    password: z.string().min(1).max(128),
+  }).strict(),
+  login: z.object({
+    email: z.string().trim().email().max(254),
+    password: z.string().min(1).max(128),
+  }).strict(),
+  aiSuggestion: z.object({ text: nonEmptyText(2000) }).strict(),
+};
+
+export type RequestSchema = keyof typeof requestSchemas;
+
+export const validateRequest = (schemaName: RequestSchema) => (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const result = requestSchemas[schemaName].safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Request validation failed.',
+      code: 'VALIDATION_ERROR',
+      errors: result.error.issues.map(({ path, message }) => ({ path: path.join('.'), message })),
+    });
   }
 
-  if (!['todo', 'in-progress', 'done', 'blocked'].includes(normalizedStatus)) {
-    return res.status(400).json({ success: false, message: 'Invalid task status.' });
-  }
-
-  if (!['low', 'medium', 'high', 'urgent'].includes(normalizedPriority)) {
-    return res.status(400).json({ success: false, message: 'Invalid task priority.' });
-  }
-
-  req.body.title = normalizedTitle;
-  req.body.description = normalizedDescription;
-  req.body.priority = normalizedPriority;
-  req.body.status = normalizedStatus;
-
+  req.body = result.data;
   return next();
 };
+

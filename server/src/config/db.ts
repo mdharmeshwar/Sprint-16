@@ -10,9 +10,11 @@ export const connectDB = async () => {
 
   try {
     await connect(mongoUri);
-    console.log('MongoDB connected');
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('MongoDB connected');
+    }
   } catch (error) {
-    console.error('MongoDB connection failed:', (error as Error).message);
+    console.error('MongoDB connection failed:', { errorName: (error as Error).name || 'Error' });
     throw error;
   }
 };

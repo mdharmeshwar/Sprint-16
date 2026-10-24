@@ -1,15 +1,18 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 import authRoutes from './routes/authRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import stripeRoutes from './routes/stripeRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
-dotenv.config();
-
 const app = express();
+const trustedProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+if (Number.isInteger(trustedProxyHops) && trustedProxyHops > 0) {
+  app.set('trust proxy', trustedProxyHops);
+}
 
 const configuredOrigins = (process.env.CLIENT_URL || 'http://localhost:5173,http://localhost:5174')
   .split(',')
@@ -48,6 +51,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

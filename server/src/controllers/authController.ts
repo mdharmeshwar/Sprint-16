@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import User from '../models/User.js';
 import { signToken } from '../utils/jwt.js';
 import { getMemoryUserByEmail, makeId, memoryUsers, useMemoryStore } from '../utils/memoryStore.js';
+import { buildErrorResponse } from '../utils/response.js';
 
 export const registerUser = async (req: Request, res: Response) => {
   const { name, email, password } = req.body || {};
@@ -16,7 +17,7 @@ export const registerUser = async (req: Request, res: Response) => {
   if (useMemoryStore()) {
     const existingUser = getMemoryUserByEmail(normalizedEmail);
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists.' });
+      return res.status(409).json(buildErrorResponse('User already exists.', 'CONFLICT'));
     }
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
@@ -43,7 +44,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
   const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
-    return res.status(400).json({ success: false, message: 'User already exists.' });
+    return res.status(409).json(buildErrorResponse('User already exists.', 'CONFLICT'));
   }
 
   const hashedPassword = await bcrypt.hash(String(password), 10);
@@ -63,7 +64,7 @@ export const loginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    return res.status(400).json(buildErrorResponse('Email and password are required.', 'VALIDATION_ERROR'));
   }
 
   const normalizedEmail = String(email).toLowerCase();
@@ -71,12 +72,12 @@ export const loginUser = async (req: Request, res: Response) => {
   if (useMemoryStore()) {
     const user = getMemoryUserByEmail(normalizedEmail);
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(401).json(buildErrorResponse('Invalid email or password.', 'UNAUTHORIZED'));
     }
 
     const isMatch = await bcrypt.compare(String(password), user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(401).json(buildErrorResponse('Invalid email or password.', 'UNAUTHORIZED'));
     }
 
     const token = signToken(user._id);
@@ -91,12 +92,12 @@ export const loginUser = async (req: Request, res: Response) => {
 
   const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
-    return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    return res.status(401).json(buildErrorResponse('Invalid email or password.', 'UNAUTHORIZED'));
   }
 
   const isMatch = await bcrypt.compare(String(password), user.password);
   if (!isMatch) {
-    return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    return res.status(401).json(buildErrorResponse('Invalid email or password.', 'UNAUTHORIZED'));
   }
 
   const token = signToken(user._id.toString());

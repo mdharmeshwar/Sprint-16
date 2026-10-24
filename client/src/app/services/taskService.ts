@@ -10,3 +10,6 @@ export const updateTask = async (token: string, id: string, task: any) =>
 
 export const deleteTask = async (token: string, id: string) =>
   api.delete<{ success: boolean; message?: string }>(`/tasks/${id}`, token);
+
+export const improveTaskDescription = async (token: string, text: string) =>
+  api.post<{ success: boolean; data: { suggestion: string } }>('/ai/suggest', { text }, token);

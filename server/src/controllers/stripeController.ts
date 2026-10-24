@@ -1,6 +1,7 @@
 ﻿import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 import type { AuthenticatedRequest } from '../middleware/authMiddleware.js';
+import { buildErrorResponse } from '../utils/response.js';
 
 const getStripeClient = () => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -18,7 +19,7 @@ export const createCheckoutSession = async (req: AuthenticatedRequest, res: Resp
   const stripe = getStripeClient();
 
   if (!stripe) {
-    return res.status(500).json({ success: false, message: 'Stripe is not configured.' });
+    return res.status(503).json(buildErrorResponse('Checkout is temporarily unavailable.', 'SERVICE_UNAVAILABLE'));
   }
 
   try {
@@ -44,7 +45,7 @@ export const createCheckoutSession = async (req: AuthenticatedRequest, res: Resp
     });
 
     return res.status(200).json({ success: true, url: session.url });
-  } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to create checkout session.' });
+  } catch {
+    return res.status(502).json(buildErrorResponse('Checkout provider is temporarily unavailable.', 'UPSTREAM_ERROR'));
   }
 };
